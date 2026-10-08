@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schoonmaakrooster generator</title>
+<style>
+/* Offline staff tool: one file, no internet, no installation. Data stays in this browser and in back-up files. */
+:root{
+  --bg:#F3F5F2; --surface:#FFFFFF; --ink:#16211D; --muted:#5B6963; --line:#D8E0DA; --tint:#E8EEEA;
+  --accent:#0E6A58; --accent-ink:#FFFFFF; --head:#2D5597; --head-ink:#FFFFFF;
+  --mark:#FBE38A; --mark-ink:#3A2E00; --warn:#B3402A; --warn-bg:#FBE8E3; --alert:#9A5B00; --alert-bg:#FFF1D6; --ok:#1F7A45; --ok-bg:#E2F3E8;
+  --f-body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --f-code:ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+[hidden]{display:none!important}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:16px 64px;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+h1{font-size:1.5rem;margin:0}
+h2{font-size:1.15rem;margin:0}
+h3{font-size:1rem;margin:0}
+p{margin:0}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 12px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font-weight:500;color:var(--muted);white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 12px;font-size:.9rem;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{border-color:transparent;background:none;text-decoration:underline;padding-inline:4px}
+.btn.danger{color:var(--warn)}
+.btn:disabled{opacity:.5;cursor:default}
+select,input[type=text],input[type=date],input[type=month],textarea{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--surface)}
+.code{font-family:var(--f-code);font-size:.86em;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.alert{background:var(--alert-bg);color:var(--alert)} .chip.neutral{background:var(--tint);color:var(--muted)}
+.chip button{border:0;background:none;padding:0;color:inherit;font-weight:700}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table.rota{border-collapse:collapse;width:100%;min-width:820px;font-size:.85rem}
+.rota th,.rota td{padding:5px 6px;border-bottom:1px solid var(--line);border-inline-end:1px solid var(--line);text-align:center;vertical-align:top}
+.rota thead th{background:var(--head);color:var(--head-ink);font-weight:600;position:sticky;top:0}
+.rota tbody th{text-align:start;white-space:nowrap;font-weight:600}
+.rota tbody th .w{font-weight:400;color:var(--muted);margin-inline-start:4px}
+.rota tr.we{background:var(--tint)}
+.rota tr.past{opacity:.5}
+.slot{display:inline-block;border:1px solid transparent;background:none;border-radius:4px;padding:1px 4px;font-family:var(--f-code);font-size:.82rem;white-space:nowrap}
+button.slot:hover{border-color:var(--accent)}
+.slot.sel{background:var(--accent);color:var(--accent-ink)}
+.slot.bad{background:var(--warn-bg);color:var(--warn);font-weight:700}
+.slot.dup{background:var(--alert-bg);color:var(--alert);font-weight:700}
+.slot.chg{text-decoration:underline dotted;text-underline-offset:3px}
+.slot.empty{color:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--muted);align-items:center}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--bg)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.stats{grid-template-columns:minmax(0,1fr)}}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface)}
+.stat .n{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}
+.stat.good .n{color:var(--ok)} .stat.bad .n{color:var(--warn)}
+table.edit{border-collapse:collapse;width:100%;min-width:760px;font-size:.88rem}
+table.edit th{text-align:start;font-size:.78rem;color:var(--muted);padding:4px 6px}
+table.edit td{padding:4px 6px;vertical-align:middle;border-top:1px solid var(--line)}
+table.edit input[type=text]{width:100%}
+table.edit input.short{width:6rem}
+.days{display:inline-flex;gap:3px;flex-wrap:wrap}
+.days button{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:2px 6px;font-size:.78rem;min-width:2.1rem}
+.days button[aria-pressed="true"]{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-weight:700;text-decoration:line-through}
+ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.notice{border-radius:8px;padding:10px 14px;background:var(--alert-bg);color:var(--alert)}
+.confirm{border:1px solid var(--warn);background:var(--warn-bg);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
+textarea{width:100%;font-family:var(--f-code);font-size:.85rem}
+.toast{position:fixed;inset-inline:16px;bottom:16px;margin-inline:auto;max-width:440px;background:var(--ink);color:var(--bg);border-radius:8px;padding:10px 14px;text-align:center;font-weight:500}
+#print{display:none}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  body{background:#fff}
+  .wrap,.toast{display:none!important}
+  #print{display:block}
+  #print h1{font-size:18pt;color:#2D5597;text-align:center;margin:0}
+  #print p{text-align:center;font-style:italic;margin:2pt 0 8pt}
+  #print table{border-collapse:collapse;width:100%;font-size:9pt}
+  #print th,#print td{border:1px solid #999;padding:3pt 4pt;text-align:center}
+  #print thead th{background:#2D5597;color:#fff}
+  #print tbody th{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="print"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="restore" accept=".json,application/json" hidden>
+<script>
+(function(){
+"use strict";
+const STR={
+nl:{tool:"Schoonmaakrooster generator",offline:"Werkt zonder internet. Gegevens blijven op deze computer.",
+ tabRota:"Rooster",tabNew:"Nieuwe maand",tabSet:"Kamers en plekken",floor:"Verdieping",month:"Maand",
+ backupSave:"Back-up opslaan",backupOpen:"Back-up openen",backupHint:"Laatste back-up: {when}",never:"nog nooit",backupWarn:"Sla regelmatig een back-up op. Als de browsergegevens worden gewist, is dat je enige kopie.",
+ noMonths:"Nog geen rooster voor deze verdieping. Maak er een bij 'Nieuwe maand'.",
+ exWord:"Word",exExcel:"Excel",exPrint:"Afdrukken / PDF",exWa:"WhatsApp-tekst",copied:"Gekopieerd. Plak het in de WhatsApp-groep.",copyFail:"Kopiëren lukte niet. Selecteer de tekst hieronder.",
+ legendBad:"kamer kan die dag niet",legendDup:"twee beurten op één dag",legendChg:"gewijzigd",date:"Datum",
+ pickHint:"Klik op een kamer in het rooster om een ruil te zoeken of de beurt te wijzigen.",
+ selTitle:"{room} · {place}",selDay:"{date}",
+ cantTitle:"Kan deze kamer niet? Kies een ruil",cantHint:"De andere kamer neemt deze beurt over en deze kamer neemt een beurt van de andere kamer. Alleen ruilen zonder dubbele beurten en zonder dagen waarop een kamer niet kan.",
+ same:"zelfde plek",doSwap:"Ruil",noSwap:"Geen passende ruil gevonden in deze maand.",
+ takeTitle:"Alleen overnemen (zonder terugruil)",takeHint:"De gekozen kamer krijgt er een beurt bij.",doTake:"Overnemen",nobodyFree:"Geen kamer vrij op die dag.",
+ setTitle:"Handmatig aanpassen",setBtn:"Zet",emptyOpt:"(leeg)",
+ swapDone:"Geruild: {a} en {b}.",takeDone:"{b} neemt de beurt van {a} over.",setDone:"Aangepast.",
+ logTitle:"Wijzigingen in {month}",noLog:"Nog geen wijzigingen.",logSwap:"{a} ⇄ {b}: {p1} {d1} ↔ {p2} {d2}",logTake:"{b} nam over van {a}: {p1} {d1}",logSet:"{p1} {d1}: {a} → {b}",
+ issues:"Aandachtspunten",noIssues:"Geen conflicten in dit rooster.",
+ newTitle:"Rooster maken voor",gen:"Maak rooster",regen:"Andere verdeling",conflicts:"Conflicten",confHint:"beurten op een dag dat een kamer niet kan; moet 0 zijn",range:"Beurten per kamer",rangeHint:"minste en meeste",inrow:"Twee dagen op rij",inrowHint:"keer dat een kamer twee dagen achter elkaar moet",
+ saveMonth:"Opslaan als rooster van {month}",exists:"Er is al een rooster voor {month}. Opslaan vervangt het.",yesReplace:"Ja, vervangen",cancel:"Annuleren",saved:"Rooster van {month} opgeslagen.",
+ rulesTitle:"Hoe het rooster gemaakt wordt",r1:"Geen beurt op een dag dat een kamer niet kan (vaste weekdagen en losse datums)",r2:"Keukens alleen voor de kamers van die keukengroep; andere plekken voor iedereen",r3:"Beurten zo gelijk mogelijk verdeeld",r4:"Liever geen twee dagen achter elkaar",
+ notAvail:"Wie kan wanneer niet",nobodyNot:"Iedereen kan elke dag.",perRoom:"Verdeling per kamer",
+ loc:"Locatie",floorsT:"Verdiepingen",addFloor:"Verdieping toevoegen",newFloorPh:"bijv. 7e verdieping",delFloor:"Verwijder deze verdieping",delFloorAsk:"Verdieping {floor} met alle kamers, plekken en roosters verwijderen?",yesDelete:"Ja, verwijderen",floorExists:"Deze verdieping bestaat al.",
+ placesT:"Schoonmaakplekken op {floor}",placeNl:"Naam (NL)",placeEn:"Naam (EN)",perTurn:"Kamers per beurt",who:"Wie",everyone:"Alle kamers",groupN:"Keukengroep {g}",remove:"Verwijder",addPlace:"Plek toevoegen",placesHint:"Wijzigingen gelden voor nieuwe roosters. Opgeslagen roosters blijven zoals ze zijn.",
+ roomsT:"Kamers op {floor}",room:"Kamer",group:"Keukengroep",never:"Kan nooit op",alsoNot:"Ook niet op (datum)",addRoom:"Kamer toevoegen",
+ bulkT:"Meerdere kamers tegelijk",bulkHint:"Plak een lijst: één kamer per regel, met daarachter de keukengroep. Bijvoorbeeld: T2.11 1",bulkAdd:"Toevoegen",bulkDone:"{n} kamers toegevoegd.",
+ dupRoom:"Kamer {room} staat er twee keer in.",restored:"Back-up geladen.",restoreFail:"Dit bestand is geen geldige back-up.",backupSaved:"Back-up opgeslagen in je downloads.",
+ waLink:"",wordTitle:"Schoonmaakrooster {floor}"},
+en:{tool:"Cleaning schedule generator",offline:"Works without internet. Data stays on this computer.",
+ tabRota:"Schedule",tabNew:"New month",tabSet:"Rooms and places",floor:"Floor",month:"Month",
+ backupSave:"Save back-up",backupOpen:"Open back-up",backupHint:"Last back-up: {when}",never:"never",backupWarn:"Save a back-up regularly. If the browser data is cleared, it is your only copy.",
+ noMonths:"No schedule for this floor yet. Make one under 'New month'.",
+ exWord:"Word",exExcel:"Excel",exPrint:"Print / PDF",exWa:"WhatsApp text",copied:"Copied. Paste it into the WhatsApp group.",copyFail:"Copy didn't work. Select the text below.",
+ legendBad:"room can't that day",legendDup:"two turns on one day",legendChg:"changed",date:"Date",
+ pickHint:"Click a room in the schedule to find a swap or change the turn.",
+ selTitle:"{room} · {place}",selDay:"{date}",
+ cantTitle:"Room can't make it? Pick a swap",cantHint:"The other room takes this turn and this room takes one of theirs. Only swaps without double turns and without days a room can't do.",
+ same:"same place",doSwap:"Swap",noSwap:"No fitting swap found this month.",
+ takeTitle:"Hand over only (no swap back)",takeHint:"The chosen room gets one extra turn.",doTake:"Hand over",nobodyFree:"No room is free that day.",
+ setTitle:"Change by hand",setBtn:"Set",emptyOpt:"(empty)",
+ swapDone:"Swapped: {a} and {b}.",takeDone:"{b} takes over from {a}.",setDone:"Changed.",
+ logTitle:"Changes in {month}",noLog:"No changes yet.",logSwap:"{a} ⇄ {b}: {p1} {d1} ↔ {p2} {d2}",logTake:"{b} took over from {a}: {p1} {d1}",logSet:"{p1} {d1}: {a} → {b}",
+ issues:"Points of attention",noIssues:"No conflicts in this schedule.",
+ newTitle:"Build the schedule for",gen:"Build schedule",regen:"Different split",conflicts:"Conflicts",confHint:"turns on a day a room can't do; should be 0",range:"Turns per room",rangeHint:"fewest and most",inrow:"Two days in a row",inrowHint:"times a room has two days in a row",
+ saveMonth:"Save as the {month} schedule",exists:"There is already a schedule for {month}. Saving replaces it.",yesReplace:"Yes, replace",cancel:"Cancel",saved:"{month} schedule saved.",
+ rulesTitle:"How the schedule is built",r1:"No turn on a day a room can't do (fixed weekdays and single dates)",r2:"Kitchens only for rooms in that kitchen group; other places for everyone",r3:"Turns split as evenly as possible",r4:"Avoid two days in a row",
+ notAvail:"Who can't when",nobodyNot:"Everyone can clean any day.",perRoom:"Split per room",
+ loc:"Location",floorsT:"Floors",addFloor:"Add floor",newFloorPh:"e.g. 7th floor",delFloor:"Remove this floor",delFloorAsk:"Remove floor {floor} with all its rooms, places and schedules?",yesDelete:"Yes, remove",floorExists:"This floor already exists.",
+ placesT:"Cleaning places on {floor}",placeNl:"Name (NL)",placeEn:"Name (EN)",perTurn:"Rooms per turn",who:"Who",everyone:"All rooms",groupN:"Kitchen group {g}",remove:"Remove",addPlace:"Add place",placesHint:"Changes apply to new schedules. Saved schedules stay as they are.",
+ roomsT:"Rooms on {floor}",room:"Room",group:"Kitchen group",never:"Never on",alsoNot:"Also not on (date)",addRoom:"Add room",
+ bulkT:"Several rooms at once",bulkHint:"Paste a list: one room per line, followed by its kitchen group. For example: T2.11 1",bulkAdd:"Add",bulkDone:"{n} rooms added.",
+ dupRoom:"Room {room} appears twice.",restored:"Back-up loaded.",restoreFail:"This file is not a valid back-up.",backupSaved:"Back-up saved to your downloads.",
+ waLink:"",wordTitle:"Cleaning schedule {floor}"}};
+const WD={nl:["ma","di","wo","do","vr","za","zo"],en:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]};
+const MS={nl:["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"],en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]};
+const ML={nl:["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"],en:["January","February","March","April","May","June","July","August","September","October","November","December"]};
+
+/* ---------- starting data: SOZA, 1st floor as in the October 2026 Word schedule ---------- */
+const PLACES=[{nl:"Badkamer",en:"Bathroom",n:1,g:"alle"},{nl:"WC",en:"Toilet",n:1,g:"alle"},{nl:"Gang/Speelruimte",en:"Hallway/Playroom",n:1,g:"alle"},{nl:"Keuken 1",en:"Kitchen 1",n:2,g:"1"},{nl:"Keuken 2",en:"Kitchen 2",n:1,g:"2"},{nl:"Keuken 3",en:"Kitchen 3",n:1,g:"3/4"},{nl:"Keuken 4",en:"Kitchen 4",n:1,g:"3/4"}];
+const GROUPS={"1":["K1.01A/K1.01B","K1.02/K1.03","K1.04/K1.05","K1.06/K1.07","L1.03","L1.05/L1.06","L1.07/L1.08b","L1.09","L1.12","T1.01","T1.03","T1.05","T1.11","T1.14"],"2":["R1.01/R1.02","R1.04","R1.07","R1.10","R1.11","R1.13A","U1.03","U1.05"],"3/4":["S1.01/1.02","S1.03","U1.06A","U1.07A/U1.07B","V1.02D/V1.02E","V1.03","V1.04"]};
+const OCT=`K1.06/K1.07|R1.01/R1.02|L1.03|K1.02/K1.03+L1.09|U1.03|V1.04|U1.06A
+U1.05|R1.11|R1.07|L1.12+T1.14|U1.05|V1.02D/V1.02E|U1.07A/U1.07B
+K1.02/K1.03|T1.11|S1.03|K1.01A/K1.01B+T1.05|R1.10|U1.05|S1.01/1.02
+L1.05/L1.06|U1.07A/U1.07B|U1.06A|L1.03+K1.06/K1.07|R1.07|U1.03|V1.03
+T1.14|L1.09|T1.11|K1.04/K1.05+L1.12|R1.11|S1.01/1.02|V1.04
+R1.01/R1.02|K1.04/K1.05|T1.03|K1.02/K1.03+T1.01|R1.13A|U1.07A/U1.07B|V1.02D/V1.02E
+R1.11|T1.05|U1.05|K1.04/K1.05+T1.03|R1.10|S1.03|S1.03
+S1.01/1.02|V1.03|L1.09|L1.07/L1.08b+K1.06/K1.07|R1.01/R1.02|U1.06A|U1.06A
+U1.07A/U1.07B|L1.12|L1.05/L1.06|L1.03+T1.14|R1.04|V1.04|V1.03
+L1.07/L1.08b|K1.06/K1.07|K1.02/K1.03|K1.01A/K1.01B+T1.11|U1.03|S1.01/1.02|S1.03
+K1.04/K1.05|R1.04|R1.01/R1.02|L1.07/L1.08b+T1.05|U1.05|V1.02D/V1.02E|V1.03
+T1.05|R1.13A|R1.11|L1.03+T1.01|R1.10|U1.06A|V1.04
+V1.03|T1.14|T1.11|L1.05/L1.06+T1.03|R1.07|S1.01/1.02|S1.01/1.02
+L1.12|V1.02D/V1.02E|U1.07A/U1.07B|K1.04/K1.05+T1.14|R1.11|V1.03|V1.03
+R1.04|R1.10|L1.05/L1.06|K1.01A/K1.01B+L1.12|R1.13A|U1.03|U1.03
+T1.01|L1.03|S1.01/1.02|K1.06/K1.07+T1.11|R1.01/R1.02|U1.07A/U1.07B|U1.07A/U1.07B
+V1.02D/V1.02E|U1.03|T1.05|L1.07/L1.08b+T1.01|R1.07|V1.04|S1.03
+R1.10|V1.04|V1.03|L1.09+K1.04/K1.05|R1.10|S1.01/1.02|S1.01/1.02
+U1.03|K1.01A/K1.01B|L1.12|K1.02/K1.03+T1.05|R1.01/R1.02|U1.05|V1.02D/V1.02E
+V1.04|R1.07|R1.04|L1.09+T1.03|R1.04|U1.06A|U1.06A
+K1.01A/K1.01B|S1.03|R1.13A|R1.11+K1.06/K1.07|R1.10|S1.01/1.02|V1.02D/V1.02E
+R1.07|U1.06A|U1.03|T1.03+T1.05|U1.05|U1.07A/U1.07B|U1.07A/U1.07B
+L1.09|V1.03|V1.02D/V1.02E|K1.02/K1.03+T1.11|R1.13A|S1.03|S1.03
+T1.03|L1.05/L1.06|R1.10|L1.12+T1.14|R1.07|U1.03|U1.06A
+T1.11|T1.01|L1.09|K1.01A/K1.01B+T1.05|R1.11|V1.04|S1.03
+L1.03|U1.05|V1.04|L1.05/L1.06+K1.06/K1.07|U1.03|V1.02D/V1.02E|S1.01/1.02
+S1.03|K1.02/K1.03|K1.01A/K1.01B|K1.04/K1.05+L1.12|R1.13A|U1.05|U1.05
+U1.05|L1.07/L1.08b|L1.03|K1.02/K1.03+T1.01|R1.10|U1.06A|V1.02D/V1.02E
+U1.06A|R1.01/R1.02|R1.07|K1.04/K1.05+T1.03|R1.04|V1.03|V1.03
+R1.13A|S1.01/1.02|T1.14|L1.07/L1.08b+K1.06/K1.07|U1.03|U1.07A/U1.07B|V1.04
+T1.05|R1.13A|R1.11|L1.03+T1.01|R1.10|U1.06A|U1.06A`;
+function freshFloor(){return {rooms:[],places:PLACES.map(p=>({...p})),months:{},log:[]};}
+function fresh(){
+ const f1=freshFloor();
+ Object.keys(GROUPS).forEach(g=>GROUPS[g].forEach(u=>f1.rooms.push({u,g,never:u==="T1.11"?[4,5,6]:[],dates:[]})));
+ const days={};OCT.split("\n").forEach((l,i)=>{const p=l.split("|");const k=p[3].split("+");days[i+1]=[p[0],p[1],p[2],k[0],k[1],p[4],p[5],p[6]];});
+ f1.months["2026-10"]={cols:PLACES.map(p=>({nl:p.nl,en:p.en,n:p.n})),days,changed:[]};
+ const floors={"1e verdieping":f1};
+ ["2e verdieping","3e verdieping","4e verdieping","5e verdieping","6e verdieping"].forEach(f=>floors[f]=freshFloor());
+ return {v:1,lang:"nl",location:"SOZA",floor:"1e verdieping",view:"rota",key:"2026-10",floors,lastBackup:null};
+}
+const KEY="schoonmaakrooster-generator-v1";
+let S;try{S=JSON.parse(localStorage.getItem(KEY))||fresh();}catch(e){S=fresh();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const U={sel:null,gen:null,seed:1,confirm:null,newKey:null};
+
+/* ---------- helpers ---------- */
+const t=(k,v)=>{let s=(STR[S.lang]||STR.nl)[k]||STR.nl[k]||k;if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const F=()=>S.floors[S.floor];
+const ym=k=>{const [y,m]=k.split("-").map(Number);return {y,m:m-1};};
+const keyOf=(y,m)=>y+"-"+String(m+1).padStart(2,"0");
+const dim=(y,m)=>new Date(y,m+1,0).getDate();
+const wdOf=(k,d)=>{const {y,m}=ym(k);return (new Date(y,m,d).getDay()+6)%7;};
+const iso=(k,d)=>k+"-"+String(d).padStart(2,"0");
+const monthName=k=>{const {y,m}=ym(k);return ML[S.lang][m]+" "+y;};
+const fmt=(k,d)=>{const {m}=ym(k);return `${WD[S.lang][wdOf(k,d)]} ${d} ${MS[S.lang][m]}`;};
+const label=c=>c?(c[S.lang]||c.nl):"";
+function lay(cols){const sc=[],st=[];let o=0;cols.forEach((c,i)=>{st.push(o);for(let j=0;j<c.n;j++)sc.push(i);o+=c.n;});return {sc,st};}
+const todayKey=()=>{const n=new Date();return keyOf(n.getFullYear(),n.getMonth());};
+const isPast=(k,d)=>{const n=new Date();const tk=todayKey();return k<tk||(k===tk&&d<n.getDate());};
+const roomOf=u=>F().rooms.find(r=>r.u===u);
+const cantOn=(u,k,d)=>{const r=roomOf(u);if(!r)return false;return (r.never||[]).includes(wdOf(k,d))||(r.dates||[]).includes(iso(k,d));};
+// Which rooms may do the place in column i: everyone, or the rooms of its kitchen group.
+function poolFor(col){const p=F().places.find(x=>x.nl===col.nl);const g=p?p.g:"alle";const all=F().rooms.map(r=>r.u);return (!g||g==="alle")?all:F().rooms.filter(r=>r.g===g).map(r=>r.u);}
+let toastT;function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3500);}
+function download(name,type,content){const blob=new Blob([content],{type});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+
+/* ---------- header ---------- */
+function header(){
+ const floors=Object.keys(S.floors);
+ return `<header class="top"><div><div class="eyebrow">${esc(S.location)} · ${esc(t("offline"))}</div><h1>${esc(t("tool"))}</h1></div>
+ <div class="row"><label class="small muted" for="floorsel">${esc(t("floor"))}</label><select id="floorsel">${floors.map(f=>`<option ${f===S.floor?"selected":""}>${esc(f)}</option>`).join("")}</select>
+ <div class="seg" role="group" aria-label="Language">${[["nl","NL"],["en","EN"]].map(([k,l])=>`<button data-act="lang" data-v="${k}" aria-pressed="${S.lang===k}">${l}</button>`).join("")}</div></div></header>
+ <div class="row small"><button class="btn" data-act="backup">${esc(t("backupSave"))}</button><button class="btn" data-act="restore">${esc(t("backupOpen"))}</button>
+ <span class="muted">${esc(t("backupHint",{when:S.lastBackup?new Date(S.lastBackup).toLocaleString(S.lang==="nl"?"nl-NL":"en-GB"):t("never")}))}</span></div>
+ ${!S.lastBackup?`<div class="notice small">${esc(t("backupWarn"))}</div>`:""}
+ <nav class="tabs" role="tablist">${[["rota","tabRota"],["new","tabNew"],["set","tabSet"]].map(([v,k])=>`<button role="tab" data-act="view" data-v="${v}" aria-selected="${S.view===v}">${esc(t(k))}</button>`).join("")}</nav>`;
+}
+
+/* ---------- schedule table ---------- */
+function issuesOf(k,mon){
+ const out={bad:new Set(),dup:new Set()};const L=lay(mon.cols);
+ Object.keys(mon.days).forEach(dk=>{const d=+dk,row=mon.days[d],seen={};
+  row.forEach((u,s)=>{if(!u)return;if(cantOn(u,k,d))out.bad.add(d+"-"+s);(seen[u]=seen[u]||[]).push(s);});
+  Object.values(seen).forEach(ss=>{if(ss.length>1)ss.forEach(s=>out.dup.add(d+"-"+s));});});
+ return out;
+}
+function rotaTable(k,mon,opts={}){
+ const L=lay(mon.cols), iss=issuesOf(k,mon), chg=new Set(mon.changed||[]);
+ const one=(d,s)=>{const u=mon.days[d][s]||"";const id=d+"-"+s;
+  const cls=["slot",iss.bad.has(id)?"bad":"",iss.dup.has(id)?"dup":"",chg.has(id)?"chg":"",!u?"empty":"",U.sel&&U.sel.d===d&&U.sel.s===s?"sel":""].join(" ");
+  return opts.static?`<span class="${cls}">${esc(u||"—")}</span>`:`<button class="${cls}" data-act="pick" data-d="${d}" data-s="${s}">${esc(u||"—")}</button>`;};
+ let h=`<div class="tablewrap"><table class="rota"><thead><tr><th>${esc(t("date"))}</th>${mon.cols.map(c=>`<th>${esc(label(c))}</th>`).join("")}</tr></thead><tbody>`;
+ Object.keys(mon.days).map(Number).sort((a,b)=>a-b).forEach(d=>{const w=wdOf(k,d);
+  h+=`<tr class="${w>=5?"we":""} ${!opts.static&&isPast(k,d)?"past":""}"><th>${d} ${esc(MS[S.lang][ym(k).m])}<span class="w">${esc(WD[S.lang][w])}</span></th>${mon.cols.map((c,i)=>{const parts=[];for(let j=0;j<c.n;j++)parts.push(one(d,L.st[i]+j));return `<td>${parts.join(" + ")}</td>`;}).join("")}</tr>`;});
+ return h+"</tbody></table></div>";
+}
+
+/* ---------- view: schedule ---------- */
+function swapOptions(k,mon,d,s){
+ const L=lay(mon.cols), a=mon.days[d][s], colA=mon.cols[L.sc[s]], poolA=poolFor(colA), out=[];
+ Object.keys(mon.days).map(Number).forEach(d2=>{if(d2===d||isPast(k,d2))return;
+  mon.days[d2].forEach((b,s2)=>{if(!b||b===a)return;const colB=mon.cols[L.sc[s2]];
+   if(!poolA.includes(b)||!poolFor(colB).includes(a))return;
+   if(mon.days[d].includes(b)||mon.days[d2].includes(a))return;
+   if(cantOn(b,k,d)||cantOn(a,k,d2))return;
+   out.push({d2,s2,b,same:L.sc[s2]===L.sc[s]});});});
+ return out.sort((x,y)=>(y.same-x.same)||(Math.abs(x.d2-d)-Math.abs(y.d2-d))).slice(0,15);
+}
+function viewRota(){
+ const f=F(), keys=Object.keys(f.months).sort();
+ if(!keys.length)return `<section class="panel"><p class="muted">${esc(t("noMonths"))}</p></section>`;
+ if(!keys.includes(S.key))S.key=keys.includes(todayKey())?todayKey():keys[keys.length-1];
+ const k=S.key, mon=f.months[k], L=lay(mon.cols), iss=issuesOf(k,mon);
+ const tools=`<div class="row"><label class="small muted" for="monthsel">${esc(t("month"))}</label><select id="monthsel">${keys.map(x=>`<option value="${x}" ${x===k?"selected":""}>${esc(monthName(x))}</option>`).join("")}</select>
+  <span style="flex:1"></span><button class="btn" data-act="exWord">${esc(t("exWord"))}</button><button class="btn" data-act="exExcel">${esc(t("exExcel"))}</button><button class="btn" data-act="exPrint">${esc(t("exPrint"))}</button><button class="btn" data-act="exWa">${esc(t("exWa"))}</button></div>
+  <textarea id="watext" rows="6" hidden readonly></textarea>
+  <div class="legend"><span><span class="slot bad">T1.00</span> ${esc(t("legendBad"))}</span><span><span class="slot dup">T1.00</span> ${esc(t("legendDup"))}</span><span><span class="slot chg">T1.00</span> ${esc(t("legendChg"))}</span></div>`;
+ let side=`<p class="small muted">${esc(t("pickHint"))}</p>`;
+ if(U.sel&&mon.days[U.sel.d]){
+  const {d,s}=U.sel, a=mon.days[d][s], col=mon.cols[L.sc[s]];
+  const opts=a?swapOptions(k,mon,d,s):[];
+  const free=poolFor(col).filter(u=>u!==a&&!mon.days[d].includes(u)&&!cantOn(u,k,d));
+  side=`<div><div class="eyebrow">${esc(fmt(k,d))}</div><h2>${esc(t("selTitle",{room:a||t("emptyOpt"),place:label(col)}))}</h2>${a&&cantOn(a,k,d)?`<p><span class="chip warn">${esc(t("legendBad"))}</span></p>`:""}</div>
+  ${a?`<div><h3>${esc(t("cantTitle"))}</h3><p class="small muted">${esc(t("cantHint"))}</p></div>
+  ${opts.length?`<div class="opts">${opts.map(o=>`<div class="opt"><span><span class="code">${esc(o.b)}</span> <span class="small">${esc(label(mon.cols[L.sc[o.s2]]))} · ${esc(fmt(k,o.d2))}</span> ${o.same?`<span class="chip ok">${esc(t("same"))}</span>`:""}</span><button class="btn primary" data-act="swap" data-d2="${o.d2}" data-s2="${o.s2}">${esc(t("doSwap"))}</button></div>`).join("")}</div>`:`<p class="small muted">${esc(t("noSwap"))}</p>`}
+  <div><h3>${esc(t("takeTitle"))}</h3><p class="small muted">${esc(t("takeHint"))}</p></div>
+  ${free.length?`<div class="row"><select id="takesel">${free.map(u=>`<option>${esc(u)}</option>`).join("")}</select><button class="btn" data-act="take">${esc(t("doTake"))}</button></div>`:`<p class="small muted">${esc(t("nobodyFree"))}</p>`}`:""}
+  <details><summary class="small">${esc(t("setTitle"))}</summary><div class="row" style="margin-top:8px"><select id="setsel"><option value="">${esc(t("emptyOpt"))}</option>${F().rooms.map(r=>`<option ${r.u===a?"selected":""}>${esc(r.u)}</option>`).join("")}</select><button class="btn" data-act="set">${esc(t("setBtn"))}</button></div></details>`;
+ }
+ const log=(f.log||[]).filter(x=>x.k===k).slice().reverse();
+ const logHtml=log.length?`<ul class="plain small">${log.map(x=>`<li>${esc(x.kind==="swap"?t("logSwap",{a:x.a,b:x.b,p1:x.p1,d1:fmt(k,x.d1),p2:x.p2,d2:fmt(k,x.d2)}):x.kind==="take"?t("logTake",{a:x.a,b:x.b,p1:x.p1,d1:fmt(k,x.d1)}):t("logSet",{a:x.a||"—",b:x.b||"—",p1:x.p1,d1:fmt(k,x.d1)}))}</li>`).join("")}</ul>`:`<p class="small muted">${esc(t("noLog"))}</p>`;
+ const nIss=iss.bad.size+iss.dup.size;
+ return `<section class="panel">${tools}</section>
+ <div class="layout"><div>${rotaTable(k,mon)}</div>
+ <div style="display:flex;flex-direction:column;gap:16px"><section class="panel">${side}</section>
+ <section class="panel"><h3>${esc(t("issues"))}</h3>${nIss?`<p class="small"><span class="chip warn">${iss.bad.size} · ${esc(t("legendBad"))}</span> <span class="chip alert">${iss.dup.size} · ${esc(t("legendDup"))}</span></p>`:`<p class="small"><span class="chip ok">${esc(t("noIssues"))}</span></p>`}</section>
+ <section class="panel"><h3>${esc(t("logTitle",{month:monthName(k)}))}</h3>${logHtml}</section></div></div>`;
+}
+
+/* ---------- view: new month ---------- */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let x=Math.imul(seed^seed>>>15,1|seed);x=x+Math.imul(x^x>>>7,61|x)^x;return((x^x>>>14)>>>0)/4294967296;};}
+function defaultNewKey(){const keys=Object.keys(F().months).sort();const tk=todayKey();const base=keys.length&&keys[keys.length-1]>tk?keys[keys.length-1]:tk;const {y,m}=ym(base);return m===11?keyOf(y+1,0):keyOf(y,m+1);}
+function generate(k){
+ const {y,m}=ym(k), n=dim(y,m), r=rng(U.seed*7919), f=F(), all=f.rooms.map(x=>x.u), load={}, tl={}, last={};
+ const cols=f.places.map(p=>({nl:p.nl,en:p.en||p.nl,n:+p.n||1}));
+ const slotTask=[],pools=[];
+ f.places.forEach((p,i)=>{const pool=(!p.g||p.g==="alle")?all:f.rooms.filter(x=>x.g===p.g).map(x=>x.u);for(let j=0;j<(+p.n||1);j++){slotTask.push(i);pools.push(pool);}});
+ all.forEach(u=>{load[u]=0;tl[u]=cols.map(()=>0);last[u]=-9;});
+ const order=slotTask.map((_,s)=>s).sort((a,b)=>pools[a].length-pools[b].length);
+ const days={};
+ for(let d=1;d<=n;d++){const row=slotTask.map(()=>""),used=new Set();
+  for(const s of order){const cands=pools[s].filter(u=>!used.has(u)&&!cantOn(u,k,d));let best=null,bs=1e9;
+   for(const u of cands){const sc=load[u]*10+tl[u][slotTask[s]]*4+(last[u]===d-1?25:0)+r()*3;if(sc<bs){bs=sc;best=u;}}
+   row[s]=best||"";if(best){used.add(best);load[best]++;tl[best][slotTask[s]]++;}}
+  used.forEach(u=>last[u]=d);days[d]=row;}
+ let conf=0,inrow=0,empty=0;
+ for(let d=1;d<=n;d++){days[d].forEach(u=>{if(!u)empty++;else if(cantOn(u,k,d))conf++;});if(d>1)new Set(days[d].filter(Boolean)).forEach(u=>{if(days[d-1].includes(u))inrow++;});}
+ const vals=Object.values(load);
+ U.gen={k,mon:{cols,days,changed:[]},load,conf,inrow,empty,min:vals.length?Math.min(...vals):0,max:vals.length?Math.max(...vals):0};
+}
+function viewNew(){
+ const f=F(); if(!U.newKey)U.newKey=defaultNewKey(); const k=U.newKey, g=U.gen&&U.gen.k===k?U.gen:null, exists=!!f.months[k];
+ const notAv=f.rooms.filter(r=>(r.never||[]).length||(r.dates||[]).some(x=>x.startsWith(k)));
+ const nav=notAv.length?`<ul class="plain small">${notAv.map(r=>`<li><span class="code">${esc(r.u)}</span> ${(r.never||[]).slice().sort().map(i=>`<span class="chip warn">${esc(WD[S.lang][i])}</span>`).join(" ")} ${(r.dates||[]).filter(x=>x.startsWith(k)).map(x=>`<span class="chip alert">${esc(fmt(k,+x.slice(8)))}</span>`).join(" ")}</li>`).join("")}</ul>`:`<p class="small muted">${esc(t("nobodyNot"))}</p>`;
+ let res="";
+ if(g){res=`<div class="stats"><div class="stat ${g.conf?"bad":"good"}"><div class="small muted">${esc(t("conflicts"))}</div><div class="n">${g.conf}</div><div class="small muted">${esc(t("confHint"))}</div></div>
+  <div class="stat"><div class="small muted">${esc(t("range"))}</div><div class="n">${g.min}–${g.max}</div><div class="small muted">${esc(t("rangeHint"))}</div></div>
+  <div class="stat"><div class="small muted">${esc(t("inrow"))}</div><div class="n">${g.inrow}</div><div class="small muted">${esc(t("inrowHint"))}</div></div></div>
+  ${U.confirm==="replace"?`<div class="confirm"><strong>${esc(t("exists",{month:monthName(k)}))}</strong><div class="row"><button class="btn primary" data-act="savemonth">${esc(t("yesReplace"))}</button><button class="btn ghost" data-act="cancel">${esc(t("cancel"))}</button></div></div>`
+   :`<div class="row"><button class="btn primary" data-act="${exists?"askreplace":"savemonth"}">${esc(t("saveMonth",{month:monthName(k)}))}</button><button class="btn" data-act="gen">${esc(t("regen"))}</button></div>`}
+  ${rotaTable(k,g.mon,{static:true})}
+  <details><summary class="small">${esc(t("perRoom"))}</summary><p class="small" style="margin-top:8px">${Object.keys(g.load).map(u=>`<span class="code">${esc(u)}</span> <b>${g.load[u]}</b>`).join(" · ")}</p></details>`;}
+ return `<section class="panel"><div class="row"><h2>${esc(t("newTitle"))}</h2><input type="month" id="newmonth" value="${k}"><button class="btn ${g?"":"primary"}" data-act="gen">${esc(g?t("regen"):t("gen"))}</button></div>
+ <details><summary class="small">${esc(t("rulesTitle"))}</summary><ul class="small">${["r1","r2","r3","r4"].map(x=>`<li>${esc(t(x))}</li>`).join("")}</ul></details></section>
+ <div class="layout"><div style="display:flex;flex-direction:column;gap:16px">${res}</div><section class="panel"><h3>${esc(t("notAvail"))}</h3>${nav}</section></div>`;
+}
+
+/* ---------- view: rooms and places ---------- */
+function viewSet(){
+ const f=F(), groups=Array.from(new Set(f.rooms.map(r=>r.g).filter(Boolean))).sort();
+ const dups=f.rooms.map(r=>r.u).filter((u,i,a)=>u&&a.indexOf(u)!==i);
+ const places=`<div class="tablewrap"><table class="edit"><thead><tr><th>${esc(t("placeNl"))}</th><th>${esc(t("placeEn"))}</th><th>${esc(t("perTurn"))}</th><th>${esc(t("who"))}</th><th></th></tr></thead><tbody>
+ ${f.places.map((p,i)=>`<tr><td><input type="text" data-pl="${i}:nl" value="${esc(p.nl)}"></td><td><input type="text" data-pl="${i}:en" value="${esc(p.en)}"></td>
+ <td><select data-pl="${i}:n">${[1,2,3,4].map(n=>`<option ${+p.n===n?"selected":""}>${n}</option>`).join("")}</select></td>
+ <td><select data-pl="${i}:g"><option value="alle" ${p.g==="alle"?"selected":""}>${esc(t("everyone"))}</option>${groups.map(g=>`<option value="${esc(g)}" ${p.g===g?"selected":""}>${esc(t("groupN",{g}))}</option>`).join("")}</select></td>
+ <td><button class="btn ghost danger" data-act="delplace" data-i="${i}">${esc(t("remove"))}</button></td></tr>`).join("")}</tbody></table></div>
+ <div class="row"><button class="btn" data-act="addplace">${esc(t("addPlace"))}</button><span class="small muted">${esc(t("placesHint"))}</span></div>`;
+ const rooms=`${dups.length?`<div class="notice small">${esc(t("dupRoom",{room:dups[0]}))}</div>`:""}<datalist id="groups">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+ <div class="tablewrap"><table class="edit"><thead><tr><th>${esc(t("room"))}</th><th>${esc(t("group"))}</th><th>${esc(t("never"))}</th><th>${esc(t("alsoNot"))}</th><th></th></tr></thead><tbody>
+ ${f.rooms.map((r,i)=>`<tr><td><input type="text" class="short" data-rm="${i}:u" value="${esc(r.u)}"></td><td><input type="text" class="short" list="groups" data-rm="${i}:g" value="${esc(r.g)}"></td>
+ <td><span class="days">${WD[S.lang].map((w,j)=>`<button data-act="never" data-i="${i}" data-v="${j}" aria-pressed="${(r.never||[]).includes(j)}">${esc(w)}</button>`).join("")}</span></td>
+ <td><div class="row">${(r.dates||[]).slice().sort().map(x=>`<span class="chip alert">${esc(x.slice(8)+"-"+x.slice(5,7))}<button data-act="deldate" data-i="${i}" data-v="${x}" aria-label="${esc(t("remove"))}">×</button></span>`).join("")}<input type="date" data-adddate="${i}" aria-label="${esc(t("alsoNot"))}"></div></td>
+ <td><button class="btn ghost danger" data-act="delroom" data-i="${i}">${esc(t("remove"))}</button></td></tr>`).join("")}</tbody></table></div>
+ <div class="row"><button class="btn" data-act="addroom">${esc(t("addRoom"))}</button></div>
+ <details><summary class="small"><strong>${esc(t("bulkT"))}</strong></summary><p class="small muted" style="margin:8px 0">${esc(t("bulkHint"))}</p><textarea id="bulk" rows="4"></textarea><div class="row" style="margin-top:8px"><button class="btn" data-act="bulkadd">${esc(t("bulkAdd"))}</button></div></details>`;
+ const floors=Object.keys(S.floors);
+ const fl=`<div class="row"><input type="text" id="newfloor" placeholder="${esc(t("newFloorPh"))}"><button class="btn" data-act="addfloor">${esc(t("addFloor"))}</button></div>
+ ${floors.length>1?(U.confirm==="delfloor"?`<div class="confirm"><strong>${esc(t("delFloorAsk",{floor:S.floor}))}</strong><div class="row"><button class="btn primary" data-act="delfloor">${esc(t("yesDelete"))}</button><button class="btn ghost" data-act="cancel">${esc(t("cancel"))}</button></div></div>`:`<div><button class="btn ghost danger" data-act="askdelfloor">${esc(t("delFloor"))}: ${esc(S.floor)}</button></div>`):""}`;
+ return `<section class="panel"><div class="row"><label for="loc" class="small muted">${esc(t("loc"))}</label><input type="text" id="loc" value="${esc(S.location)}"></div><h3>${esc(t("floorsT"))}</h3>${fl}</section>
+ <section class="panel"><h2>${esc(t("placesT",{floor:S.floor}))}</h2>${places}</section>
+ <section class="panel"><h2>${esc(t("roomsT",{floor:S.floor}))}</h2>${rooms}</section>`;
+}
+
+/* ---------- exports ---------- */
+function exportRows(k,mon){const L=lay(mon.cols);return Object.keys(mon.days).map(Number).sort((a,b)=>a-b).map(d=>[fmt(k,d)].concat(mon.cols.map((c,i)=>mon.days[d].slice(L.st[i],L.st[i]+c.n).filter(Boolean).join(" + "))));}
+function tableHtml(k,mon){const rows=exportRows(k,mon);return `<table><thead><tr><th>${esc(t("date"))}</th>${mon.cols.map(c=>`<th>${esc(label(c))}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr><th>${esc(r[0])}</th>${r.slice(1).map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;}
+function fileBase(k){return `${t("wordTitle",{floor:S.floor})} ${monthName(k)}`.replace(/[\\/:*?"<>|]/g,"-");}
+function exWord(k,mon){
+ const html=`<html><head><meta charset="utf-8"><style>@page{size:29.7cm 21cm;margin:1.5cm}body{font-family:'Times New Roman',serif}h1{color:#2D5597;text-align:center;font-size:18pt;margin:0}p{text-align:center;font-style:italic;margin:0 0 10pt}table{border-collapse:collapse;width:100%;font-size:10pt}th,td{border:1px solid #999;padding:4pt;text-align:center}thead th{background:#2D5597;color:#fff}tbody th{text-align:left}</style></head><body><h1>${esc(t("wordTitle",{floor:S.floor}))}</h1><p>${esc(monthName(k))}</p>${tableHtml(k,mon)}</body></html>`;
+ download(fileBase(k)+".doc","application/msword","﻿"+html);
+}
+function exExcel(k,mon){
+ const q=v=>/[;"\n]/.test(v)?`"${String(v).replace(/"/g,'""')}"`:v;
+ const lines=[[t("date")].concat(mon.cols.map(label))].concat(exportRows(k,mon)).map(r=>r.map(q).join(";"));
+ download(fileBase(k)+".csv","text/csv;charset=utf-8","﻿"+lines.join("\r\n"));
+}
+function exPrint(k,mon){document.getElementById("print").innerHTML=`<h1>${esc(t("wordTitle",{floor:S.floor}))}</h1><p>${esc(monthName(k))}</p>${tableHtml(k,mon)}`;window.print();}
+function waText(k,mon){const L=lay(mon.cols),out=[`*${t("wordTitle",{floor:S.floor})}, ${monthName(k)}*`,""];
+ Object.keys(mon.days).map(Number).sort((a,b)=>a-b).forEach(d=>{out.push(`*${fmt(k,d)}*`);mon.cols.forEach((c,i)=>out.push(`${label(c)}: ${mon.days[d].slice(L.st[i],L.st[i]+c.n).filter(Boolean).join(" + ")}`));out.push("");});return out.join("\n");}
+function copyText(txt){const ta=document.getElementById("watext");const fb=()=>{if(ta){ta.value=txt;ta.hidden=false;ta.focus();ta.select();}toast(t("copyFail"));};
+ try{navigator.clipboard.writeText(txt).then(()=>toast(t("copied")),fb);}catch(e){fb();}}
+
+/* ---------- render + events ---------- */
+function render(){
+ document.documentElement.lang=S.lang;
+ if(!S.floors[S.floor])S.floor=Object.keys(S.floors)[0];
+ document.getElementById("app").innerHTML=header()+(S.view==="rota"?viewRota():S.view==="new"?viewNew():viewSet());
+ save();
+}
+function logChange(entry){const f=F();(f.log=f.log||[]).push(Object.assign({at:Date.now()},entry));}
+function markChanged(mon,ids){mon.changed=Array.from(new Set((mon.changed||[]).concat(ids)));}
+function placeOf(mon,s){return label(mon.cols[lay(mon.cols).sc[s]]);}
+
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const a=b.dataset.act,v=b.dataset.v,f=F();
+ const mon=f.months[S.key];
+ if(a==="lang")S.lang=v;
+ else if(a==="view"){S.view=v;U.confirm=null;}
+ else if(a==="pick")U.sel={d:+b.dataset.d,s:+b.dataset.s};
+ else if(a==="swap"&&U.sel){const {d,s}=U.sel,d2=+b.dataset.d2,s2=+b.dataset.s2,A=mon.days[d][s],B=mon.days[d2][s2];
+   mon.days[d][s]=B;mon.days[d2][s2]=A;markChanged(mon,[d+"-"+s,d2+"-"+s2]);
+   logChange({k:S.key,kind:"swap",a:A,b:B,d1:d,p1:placeOf(mon,s),d2,p2:placeOf(mon,s2)});U.sel=null;render();toast(t("swapDone",{a:A,b:B}));return;}
+ else if(a==="take"&&U.sel){const {d,s}=U.sel,A=mon.days[d][s],B=document.getElementById("takesel").value;
+   mon.days[d][s]=B;markChanged(mon,[d+"-"+s]);logChange({k:S.key,kind:"take",a:A,b:B,d1:d,p1:placeOf(mon,s)});U.sel=null;render();toast(t("takeDone",{a:A,b:B}));return;}
+ else if(a==="set"&&U.sel){const {d,s}=U.sel,A=mon.days[d][s],B=document.getElementById("setsel").value;
+   if(A!==B){mon.days[d][s]=B;markChanged(mon,[d+"-"+s]);logChange({k:S.key,kind:"set",a:A,b:B,d1:d,p1:placeOf(mon,s)});}U.sel=null;render();toast(t("setDone"));return;}
+ else if(a==="exWord")exWord(S.key,mon);
+ else if(a==="exExcel")exExcel(S.key,mon);
+ else if(a==="exPrint"){exPrint(S.key,mon);return;}
+ else if(a==="exWa"){copyText(waText(S.key,mon));return;}
+ else if(a==="gen"){if(U.gen&&U.gen.k===U.newKey)U.seed++;generate(U.newKey);U.confirm=null;}
+ else if(a==="askreplace")U.confirm="replace";
+ else if(a==="cancel")U.confirm=null;
+ else if(a==="savemonth"){const g=U.gen;f.months[g.k]=g.mon;S.key=g.k;S.view="rota";U.gen=null;U.confirm=null;U.newKey=null;render();toast(t("saved",{month:monthName(g.k)}));return;}
+ else if(a==="never"){const r=f.rooms[+b.dataset.i],j=+v;r.never=(r.never||[]).includes(j)?r.never.filter(x=>x!==j):[...(r.never||[]),j];U.gen=null;}
+ else if(a==="deldate"){const r=f.rooms[+b.dataset.i];r.dates=(r.dates||[]).filter(x=>x!==v);U.gen=null;}
+ else if(a==="delroom"){f.rooms.splice(+b.dataset.i,1);U.gen=null;}
+ else if(a==="addroom")f.rooms.push({u:"",g:"",never:[],dates:[]});
+ else if(a==="bulkadd"){let n=0;(document.getElementById("bulk").value||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach(l=>{const p=l.split(/[\s;,\t]+/);if(!p[0]||f.rooms.some(r=>r.u===p[0]))return;f.rooms.push({u:p[0],g:p[1]||"",never:[],dates:[]});n++;});U.gen=null;render();toast(t("bulkDone",{n}));return;}
+ else if(a==="delplace"){f.places.splice(+b.dataset.i,1);U.gen=null;}
+ else if(a==="addplace")f.places.push({nl:"",en:"",n:1,g:"alle"});
+ else if(a==="addfloor"){const n=(document.getElementById("newfloor").value||"").trim();if(!n)return;if(S.floors[n]){toast(t("floorExists"));return;}
+   const first=S.floors[Object.keys(S.floors)[0]];S.floors[n]=freshFloor();S.floors[n].places=first.places.map(p=>({...p}));S.floor=n;U.sel=null;U.gen=null;}
+ else if(a==="askdelfloor")U.confirm="delfloor";
+ else if(a==="delfloor"){delete S.floors[S.floor];S.floor=Object.keys(S.floors)[0];U.confirm=null;U.sel=null;U.gen=null;}
+ else if(a==="backup"){S.lastBackup=Date.now();save();download(`schoonmaakrooster-backup-${new Date().toISOString().slice(0,10)}.json`,"application/json",JSON.stringify(S,null,1));render();toast(t("backupSaved"));return;}
+ else if(a==="restore"){document.getElementById("restore").click();return;}
+ render();
+});
+document.addEventListener("input",e=>{const el=e.target,f=F();
+ if(el.dataset.pl){const [i,k]=el.dataset.pl.split(":");f.places[+i][k]=k==="n"?+el.value:el.value;U.gen=null;save();}
+ else if(el.dataset.rm){const [i,k]=el.dataset.rm.split(":");f.rooms[+i][k]=el.value.trim();U.gen=null;save();}
+ else if(el.id==="loc"){S.location=el.value;save();}
+});
+document.addEventListener("change",e=>{const el=e.target,f=F();
+ if(el.id==="floorsel"){S.floor=el.value;U.sel=null;U.gen=null;U.newKey=null;U.confirm=null;render();}
+ else if(el.id==="monthsel"){S.key=el.value;U.sel=null;render();}
+ else if(el.id==="newmonth"){if(el.value){U.newKey=el.value;U.gen=null;U.confirm=null;render();}}
+ else if(el.dataset.adddate!==undefined&&el.value){const r=f.rooms[+el.dataset.adddate];r.dates=Array.from(new Set([...(r.dates||[]),el.value]));U.gen=null;render();}
+ else if(el.dataset.pl||el.dataset.rm){render();}
+ else if(el.id==="restore"&&el.files[0]){const rd=new FileReader();rd.onload=()=>{try{const x=JSON.parse(rd.result);if(!x||!x.floors)throw 0;S=x;U.sel=null;U.gen=null;render();toast(t("restored"));}catch(_){toast(t("restoreFail"));}el.value="";};rd.readAsText(el.files[0]);}
+});
+render();
+})();
+</script>
+</body>
+</html>
